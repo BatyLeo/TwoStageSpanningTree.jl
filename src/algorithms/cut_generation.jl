@@ -94,6 +94,11 @@ function cut_separation_problem(graph, weights; MILP_solver=GLPK.Optimizer, tol=
     return found, value.(β)[edge_range] .< 0.5, sum(value.(α)[vertex_range])
 end
 
+"""
+$TYPEDSIGNATURES
+
+Returns the optimal solution using a cut generation algorithm with custom separation problem solver.
+"""
 function cut_generation(
     instance::TwoStageSpanningTreeInstance;
 	separation_problem=MILP_separation_pb,

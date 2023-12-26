@@ -1,12 +1,28 @@
+"""
+$TYPEDEF
+
+# Fields
+$TYPEDFIELDS
+"""
 struct TwoStageSpanningTreeSolution
     y::BitVector
     z::BitMatrix
 end
 
+"""
+$TYPEDSIGNATURES
+
+Compute the objective value of given solution for given instance.
+"""
 function solution_value(solution::TwoStageSpanningTreeSolution, instance::TwoStageSpanningTreeInstance)
     return dot(solution.y, instance.first_stage_costs) + dot(solution.z, instance.second_stage_costs) / nb_scenarios(instance)
 end
 
+"""
+$TYPEDSIGNATURES
+
+Check if a given solution is feasible for given instance.
+"""
 function is_feasible(solution::TwoStageSpanningTreeSolution, instance::TwoStageSpanningTreeInstance; verbose=true)
     (; y, z) = solution
     (; graph) = instance
@@ -29,6 +45,11 @@ function is_feasible(solution::TwoStageSpanningTreeSolution, instance::TwoStageS
     return true
 end
 
+"""
+$TYPEDSIGNATURES
+
+Return the associated two-stage solution from given first stage forest and instance.
+"""
 function solution_from_first_stage_forest(forest::BitVector, instance::TwoStageSpanningTreeInstance)
 	(; graph, second_stage_costs) = instance
 
