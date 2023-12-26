@@ -1,4 +1,4 @@
-function first_stage_optimal_solution(inst::Instance, θ::AbstractMatrix; M=20.0)
+function first_stage_optimal_solution(inst::TwoStageSpanningTreeInstance, θ::AbstractMatrix; M=20.0)
 	S = nb_scenarios(inst)
 	E = ne(inst.graph)
 
@@ -18,16 +18,17 @@ function first_stage_optimal_solution(inst::Instance, θ::AbstractMatrix; M=20.0
 end;
 
 function second_stage_optimal_solution!(
-    inst::Instance,
+    instance::TwoStageSpanningTreeInstance,
     θ::AbstractMatrix,
     scenario::Int,
     grad::AbstractMatrix,
 )
-	(; graph, second_stage_costs) = inst
+	(; graph, second_stage_costs) = instance
+    S = nb_scenarios(instance)
 
 	weights = min.(-θ[:, scenario], second_stage_costs[:, scenario])
 
-    value, tree = kruskal(inst.graph, weights)
+    (; value, tree) = kruskal(graph, weights)
 
 	# update gradient
 	slice = (-θ[:, scenario] .< second_stage_costs[:, scenario]) .&& tree
@@ -36,12 +37,12 @@ function second_stage_optimal_solution!(
     return value ./ S
 end;
 
-function lagrangian_function_value_gradient(inst::Instance, θ::AbstractMatrix)
+function lagrangian_function_value_gradient(inst::TwoStageSpanningTreeInstance, θ::AbstractMatrix)
     value, grad = first_stage_optimal_solution(inst, θ)
 
 	S = nb_scenarios(inst)
     values = zeros(S)
-    Threads.@threads for s in 1:S
+    for s in 1:S
 		# Different part of grad are modified
         values[s] = second_stage_optimal_solution!(inst, θ, s, grad)
     end
@@ -49,12 +50,12 @@ function lagrangian_function_value_gradient(inst::Instance, θ::AbstractMatrix)
     return value, grad
 end;
 
-function lagrangian_heuristic(θ::AbstractMatrix; inst::Instance)
+function lagrangian_heuristic(θ::AbstractMatrix; inst::TwoStageSpanningTreeInstance)
     # Retrieve - y_{es} / S from θ by computing the gradient
 	(; graph) = inst
 	S = nb_scenarios(inst)
     grad = zeros(ne(graph), S)
-    Threads.@threads for s in 1:S
+    for s in 1:S
         second_stage_optimal_solution!(inst, θ, s, grad)
     end
     # Compute the average (over s) y_{es} and build a graph that is a candidate spannning tree (but not necessarily a spanning tree nor a forest)
@@ -64,12 +65,13 @@ function lagrangian_heuristic(θ::AbstractMatrix; inst::Instance)
     _, tree_from_candidate = kruskal(graph, weights; minimize=false)
     # Keep only the edges that are in the initial candidate graph and in the spanning tree
     forest = weights .&& tree_from_candidate
-	v, _ = evaluate_first_stage_solution(inst, forest)
-    return v, forest
+    sol = solution_from_first_stage_forest(forest, inst)
+	# v, _ = evaluate_first_stage_solution(inst, forest)
+    return solution_value(sol, inst), forest
 end;
 
 function lagrangian_relaxation(
-    inst::Instance; nb_epochs=100, stop_gap=0.00001, show_progress=true
+    inst::TwoStageSpanningTreeInstance; nb_epochs=100, stop_gap=1e-8
 )
     θ = zeros(ne(inst.graph), nb_scenarios(inst))
 
@@ -84,7 +86,7 @@ function lagrangian_relaxation(
 
     lb_history = Float64[]
     ub_history = Float64[]
-    @progress for epoch in 1:nb_epochs
+    for epoch in 1:nb_epochs
         value, grad = lagrangian_function_value_gradient(inst, θ)
 
         if value > lb
@@ -94,7 +96,7 @@ function lagrangian_relaxation(
                 last_ub_epoch = epoch
                 ub, forest = lagrangian_heuristic(θ; inst=inst)
                 if (ub - lb) / abs(lb) <= stop_gap
-                    println("Stopped after ", epoch, " gap smaller than ", stop_gap)
+                    @info "Stopped after $epoch gap smaller than $stop_gap"
                     break
                 end
             end
@@ -105,5 +107,6 @@ function lagrangian_relaxation(
     end
 
 	ub, forest = lagrangian_heuristic(best_theta; inst=inst)
-    return (; lb, ub, forest, best_theta, lb_history, ub_history)
-end;
+    solution = solution_from_first_stage_forest(forest, inst)
+    return (; lb, ub, solution, best_theta, lb_history, ub_history)
+end

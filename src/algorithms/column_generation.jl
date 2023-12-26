@@ -1,4 +1,4 @@
-function column_generation(instance; MILP_solver=GLPK.Optimizer, tol=0.00001)
+function column_generation(instance; MILP_solver=GLPK.Optimizer, tol=1e-6, verbose=true)
 	(; graph, first_stage_costs, second_stage_costs) = instance
 
 	V = nv(graph)
@@ -60,8 +60,8 @@ function column_generation(instance; MILP_solver=GLPK.Optimizer, tol=0.00001)
 	set_attribute(model, MOI.LazyConstraintCallback(), my_callback_function)
 
 	optimize!(model)
-	@info "Optimal solution found after $callback_counter cuts"
-	return objective_value(model), value.(ν), value.(μ), trees
+	verbose && @info "Optimal solution found after $callback_counter cuts"
+	return (; value=objective_value(model), ν=value.(ν), μ=value.(μ), columns=trees)
 end
 
 function column_heuristic(instance, columns; MILP_solver=GLPK.Optimizer)
@@ -69,7 +69,7 @@ function column_heuristic(instance, columns; MILP_solver=GLPK.Optimizer)
 	E = ne(graph)
 	S = nb_scenarios(instance)
 	T = length(columns)
-	
+
 	model = Model(MILP_solver)
 
 	@variable(model, y[e in 1:E], Bin)
@@ -90,5 +90,11 @@ function column_heuristic(instance, columns; MILP_solver=GLPK.Optimizer)
 
 	optimize!(model)
 
-	return objective_value(model), value.(y) .> 0.5, value.(z) .> 0.5
+	return TwoStageSpanningTreeSolution(value.(y) .> 0.5, value.(z) .> 0.5)
+end
+
+function column_heuristic(instance; MILP_solver=GLPK.Optimizer, verbose=true)
+	(; columns) = column_generation(instance; verbose=false, MILP_solver)
+	verbose && @info "Continuous relaxation solved with $(length(columns)) columns."
+	return column_heuristic(instance, columns)
 end

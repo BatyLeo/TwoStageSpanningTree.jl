@@ -1,4 +1,4 @@
-function separate_benders_cut(instance, y, s; MILP_solver, tol=1e-5)
+function separate_benders_cut(instance::TwoStageSpanningTreeInstance, y, s; MILP_solver, tol=1e-5)
 	(; graph, first_stage_costs, second_stage_costs) = instance
 
 	E = ne(graph)
@@ -24,7 +24,6 @@ function separate_benders_cut(instance, y, s; MILP_solver, tol=1e-5)
 
 		push!(columns, tree)
 		
-		#@info "hey" val ν_val μ_val ν_val + sum(y[e] * μ_val[e] for e in 1:E)
 		if val + tol < ν_val
 			new_constraint = @build_constraint(
 				- sum(μₛ[e] for e in 1:E if tree[e]) - νₛ >= 0
@@ -32,7 +31,6 @@ function separate_benders_cut(instance, y, s; MILP_solver, tol=1e-5)
 			MOI.submit(
 				model, MOI.LazyConstraint(cb_data), new_constraint
 			)
-			# @info "" new_constraint
 		end
 	end
 
@@ -91,9 +89,79 @@ function separate_benders_cut(instance, y, s; MILP_solver, tol=1e-5)
 end
 
 function benders_decomposition(
-    instance::Instance;
+    instance::TwoStageSpanningTreeInstance;
     MILP_solver=GLPK.Optimizer,
-	tol = 1e-5
+	tol=1e-6,
+	verbose=true
+)
+	(; graph, first_stage_costs, second_stage_costs) = instance
+	E = ne(graph)
+	S = nb_scenarios(instance)
+	
+    model = Model(MILP_solver)
+    @variable(model, y[e in 1:E], Bin)
+    @variable(
+        model,
+        θ[s in 1:S] >= sum(min(0, second_stage_costs[e, s]) for e in 1:E)
+    )
+    @objective(
+        model,
+        Min,
+        sum(first_stage_costs[e] * y[e] for e in 1:E) + sum(θ[s] for s in 1:S) / S
+    )
+
+    # current_scenario = 0
+    callback_counter = 0
+    function benders_callback(cb_data)
+        if callback_counter % 10 == 0
+            verbose && @info("Benders iteration: $(callback_counter)")
+        end
+        callback_counter += 1
+
+        y_val = callback_value.(cb_data, y)
+		θ_val = callback_value.(cb_data, θ)
+
+        for current_scenario in 1:S
+            optimality_cut, ν_val, μ_val =
+				separate_benders_cut(instance, y_val, current_scenario; MILP_solver)
+
+			# If feasibility cut
+            if !optimality_cut
+                new_feasibility_cut = @build_constraint(
+                    ν_val + sum(μ_val[e] * y[e] for e in 1:E) <= 0
+                )
+                MOI.submit(
+                    model,
+					MOI.LazyConstraint(cb_data),
+					new_feasibility_cut
+                )
+
+                return nothing
+            end
+
+			# Else, optimality cut
+			if θ_val[current_scenario] + tol < ν_val + sum(μ_val[e] * y_val[e] for e in 1:E) -
+				sum(second_stage_costs[e, current_scenario] * y_val[e] for e in 1:E)
+				con = @build_constraint(
+					θ[current_scenario] >=
+						ν_val + sum(μ_val[e] * y[e] for e in 1:E) - sum(second_stage_costs[e, current_scenario] * y[e] for e in 1:E)
+				)
+				MOI.submit(model, MOI.LazyConstraint(cb_data), con)
+				return nothing
+			end
+        end
+    end
+
+    set_attribute(model, MOI.LazyConstraintCallback(), benders_callback)
+    optimize!(model)
+
+	return solution_from_first_stage_forest(value.(y) .> 0.5, instance)
+end
+
+function benders_decomposition_2(
+    instance::TwoStageSpanningTreeInstance;
+    MILP_solver=GLPK.Optimizer,
+	tol=1e-6
 )
 	(; graph, first_stage_costs, second_stage_costs) = instance
 	E = ne(graph)
@@ -164,5 +232,6 @@ function benders_decomposition(
 	end
 
 	optimize!(model)
-    return objective_value(model), value.(y) .> 0.5, value.(θ)
+	return solution_from_first_stage_forest(value.(y) .> 0.5, instance)
+    # return objective_value(model), value.(y) .> 0.5, value.(θ)
 end
