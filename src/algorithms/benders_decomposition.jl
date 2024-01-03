@@ -49,7 +49,7 @@ function separate_benders_cut(instance::TwoStageSpanningTreeInstance, y, s; MILP
 	@variable(optimality_model, νₛ)
 	@variable(optimality_model, μₛ[e in 1:E] >= 0)
 
-	obj = @objective(
+	@objective(
 		optimality_model, Max,
 		νₛ + sum(y[e] * μₛ[e] for e in 1:E) - sum(second_stage_costs[e, s] * y[e] for e in 1:E)
 	)

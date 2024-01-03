@@ -1,60 +1,75 @@
-function plot_forest(forest, instance::TwoStageSpanningTreeInstance; n=n, m=m)
-	(; graph, first_stage_costs, second_stage_costs) = instance
-	cost = Int.(min.(first_stage_costs, second_stage_costs[:, 1]))
-	function compute_layout(g)
-		[(i, j) for j in 1:m for i in 1:n]
+"""
+	plot_grid_graph(graph, n, m, weights=nothing)
+
+# Arguments
+- `graph`: grid graph to plot
+- `n`: n dimension
+- `m`: m dimension
+- `weights`: edge weights to display (optional)
+"""
+function plot_grid_graph(
+	graph, n, m, weights=nothing;
+	show_node_indices=false, δ=0.25, δ₂=0.13,
+	edge_colors=fill(:black, ne(graph)),
+	edge_widths=fill(1, ne(graph)),
+	edge_labels=fill(nothing, ne(graph)),
+	space_for_legend=0
+)
+	l = [((i - 1) % n, floor((i - 1) / n)) for i in 1:nv(graph)]
+	function args_from_ij(i, j)
+		return [l[i][1], l[j][1]], [l[i][2], l[j][2]]
 	end
-
-	f, ax, p = graphplot(
-		graph;
-		layout=compute_layout,
-		ilabels=fill(" ", nv(graph)),
-		elabels=repr.(floor.(cost)),
-		edge_color=[e ? :red : :black for e in forest],
-		edge_width=[e ? 3 : 0.5 for e in forest],
-	)
-	p.elabels_rotation[] = Dict(i => 0.0 for i in 1:ne(graph))
-	p.elabels_offset[] = [Point2f(-0.02, 0.0) for i in 1:ne(graph)]
-
-	hidedecorations!(ax); hidespines!(ax)
-	ax.aspect = DataAspect()
-	autolimits!(ax)
+	f = Plots.plot(; axis=([], false), ylimits=(-δ, m-1+δ+space_for_legend), xlimits=(-δ, n-1+δ), aspect_ratio=:equal, leg=:top)
+	for (color, width, label, e) in zip(edge_colors, edge_widths, edge_labels, edges(graph))
+		Plots.plot!(f, args_from_ij(src(e), dst(e)); color, width, label)
+	end
+	series_annotations = show_node_indices ? (1:nv(g)) : nothing
+	Plots.scatter!(f, l; series_annotations, label=nothing, markersize=15, color=:lightgrey)
+	if !isnothing(weights)
+		for (w, e) in zip(weights, edges(graph))
+			i, j = src(e), dst(e)
+			x, y = (l[j] .+ l[i]) ./ 2
+			if j == i + 1
+				y += δ₂
+			else
+				x -= δ₂
+			end
+			Plots.annotate!(f, x, y, Int(w))
+		end
+	end
 	return f
 end
 
-function plot_scenario(solution::TwoStageSpanningTreeSolution, instance::TwoStageSpanningTreeInstance, current_scenario; grid=true, n, m)
-	forest1 = solution.y
-    forest2 = solution.z
-    graph = instance.graph
-	cost = Int.(instance.first_stage_costs)
-	cost2 = Int.(@view instance.second_stage_costs[:, current_scenario])
+function plot_scenario(
+	solution::TwoStageSpanningTreeSolution, instance::TwoStageSpanningTreeInstance, scenario;
+	show_node_indices=false, δ=0.25, δ₂=0.11, n, m
+)
+	(; graph, first_stage_costs, second_stage_costs) = instance
+	first_stage_forest = solution.y
+	second_stage_forests = solution.z
 
-	function compute_layout(g)
-		[(i, j) for j in 1:m for i in 1:n]
+	is_labeled_1 = false
+	is_labeled_2 = false
+	edge_labels = fill("", ne(graph))
+
+	S = nb_scenarios(instance)
+
+	for e in 1:ne(graph)
+		b1 = first_stage_forest[e]
+		b2 = second_stage_forests[e, scenario]
+		if !is_labeled_1 && b1
+			edge_labels[e] = "First stage forest"
+			is_labeled_1 = true
+		elseif !is_labeled_2 && b2
+			edge_labels[e] = "Second stage forest (scenario $scenario/$S)"
+			is_labeled_2 = true
+		end
 	end
 
-	tree = forest1 .|| @view forest2[:, current_scenario]
-	colors = fill(:black, ne(graph))
-	width = fill(0.5, ne(graph))
-	colors[forest1] .= :red
-	colors[@view forest2[:, current_scenario]] .= :green
-	width[tree] .= 3
-	labels = copy(cost)
-	labels[.!forest1] .= cost2[.!forest1]
-	
-	f, ax, p = graphplot(
-		graph;
-		layout=grid ? compute_layout : Shell(),
-		ilabels=fill(" ", nv(graph)),
-		elabels=repr.(labels),
-		edge_color=colors,
-		edge_width=width,
+	edge_colors = [e1 ? :red : e2 ? :green : :black for (e1, e2) in zip(first_stage_forest, second_stage_forests[:, scenario])]
+	edge_widths = [e1 || e2 ? 3 : 1 for (e1, e2) in zip(first_stage_forest, second_stage_forests[:, scenario])]
+	weights = first_stage_forest .* first_stage_costs + .!first_stage_forest .* second_stage_costs[:, scenario]
+	return plot_grid_graph(
+		graph, n, m, weights; show_node_indices, δ, δ₂, edge_colors, edge_widths, edge_labels, space_for_legend=3δ
 	)
-	p.elabels_rotation[] = Dict(i => 0.0 for i in 1:ne(graph))
-	p.elabels_offset[] = [Point2f(-0.02, 0.0) for i in 1:ne(graph)]
-
-	hidedecorations!(ax); hidespines!(ax)
-	ax.aspect = DataAspect()
-	autolimits!(ax)
-	return f
 end
