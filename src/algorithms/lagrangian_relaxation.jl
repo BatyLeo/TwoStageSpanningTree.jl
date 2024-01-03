@@ -113,5 +113,5 @@ function lagrangian_relaxation(
 
 	ub, forest = lagrangian_heuristic(best_theta; inst=inst)
     solution = solution_from_first_stage_forest(forest, inst)
-    return (; lb, ub, solution, best_theta, lb_history, ub_history)
+    return solution, (; lb, ub, best_theta, lb_history, ub_history)
 end

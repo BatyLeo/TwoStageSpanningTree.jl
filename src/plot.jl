@@ -42,7 +42,7 @@ end
 
 function plot_scenario(
 	solution::TwoStageSpanningTreeSolution, instance::TwoStageSpanningTreeInstance, scenario;
-	show_node_indices=false, δ=0.25, δ₂=0.11, n, m
+	show_node_indices=false, δ=0.25, δ₂=0.16, n, m
 )
 	(; graph, first_stage_costs, second_stage_costs) = instance
 	first_stage_forest = solution.y
