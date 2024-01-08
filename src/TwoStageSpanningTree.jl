@@ -1,15 +1,13 @@
 module TwoStageSpanningTree
 
-using CairoMakie
 using DataStructures
 using DocStringExtensions
 using Flux
 using GLPK
 using Graphs
-using GraphMakie
-using GraphMakie.NetworkLayout
 using JuMP
 using LinearAlgebra: dot
+using Plots
 using Random
 
 include("utils.jl")
@@ -33,6 +31,6 @@ export column_generation, column_heuristic
 export benders_decomposition, benders_decomposition_2
 export lagrangian_relaxation
 
-export plot_forest, plot_scenario
+export plot_scenario
 
 end

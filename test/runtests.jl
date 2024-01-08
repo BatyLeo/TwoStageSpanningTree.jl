@@ -9,7 +9,7 @@ using Test
         cut_solution2 = cut_generation(instance; separation_problem=cut_separation_problem, verbose=false)
         col_solution = column_heuristic(instance; verbose=false)
         benders_solution = benders_decomposition(instance; verbose=false)
-        (; lb, ub, solution) = lagrangian_relaxation(instance; nb_epochs=25000)
+        solution, (; lb, ub) = lagrangian_relaxation(instance; nb_epochs=25000)
 
         @test is_feasible(cut_solution, instance)
         @test is_feasible(cut_solution2, instance)

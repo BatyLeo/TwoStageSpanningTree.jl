@@ -70,6 +70,11 @@ function lagrangian_heuristic(θ::AbstractMatrix; inst::TwoStageSpanningTreeInst
     return solution_value(sol, inst), forest
 end;
 
+"""
+$TYPEDSIGNATURES
+
+Return an heuristic solution using a combination of lagarngian relaxation and lagrangian heuristic.
+"""
 function lagrangian_relaxation(
     inst::TwoStageSpanningTreeInstance; nb_epochs=100, stop_gap=1e-8
 )
@@ -108,5 +113,5 @@ function lagrangian_relaxation(
 
 	ub, forest = lagrangian_heuristic(best_theta; inst=inst)
     solution = solution_from_first_stage_forest(forest, inst)
-    return (; lb, ub, solution, best_theta, lb_history, ub_history)
+    return solution, (; lb, ub, best_theta, lb_history, ub_history)
 end

@@ -1,3 +1,8 @@
+"""
+$TYPEDSIGNATURES
+
+Solves the linear relaxation using a column generation algorithm.
+"""
 function column_generation(instance; MILP_solver=GLPK.Optimizer, tol=1e-6, verbose=true)
 	(; graph, first_stage_costs, second_stage_costs) = instance
 
@@ -93,6 +98,12 @@ function column_heuristic(instance, columns; MILP_solver=GLPK.Optimizer)
 	return TwoStageSpanningTreeSolution(value.(y) .> 0.5, value.(z) .> 0.5)
 end
 
+"""
+$TYPEDSIGNATURES
+
+Column generation heuristic, that solves the linear relaxation and then outputs the solution of the proble restricted to selected columns.
+Returns an heuristic solution.
+"""
 function column_heuristic(instance; MILP_solver=GLPK.Optimizer, verbose=true)
 	(; columns) = column_generation(instance; verbose=false, MILP_solver)
 	verbose && @info "Continuous relaxation solved with $(length(columns)) columns."
