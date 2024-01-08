@@ -40,6 +40,11 @@ function plot_grid_graph(
 	return f
 end
 
+"""
+$TYPEDSIGNATURES
+
+Plot the two-stage tree from `solution` for requested `scenario`.
+"""
 function plot_scenario(
 	solution::TwoStageSpanningTreeSolution, instance::TwoStageSpanningTreeInstance, scenario;
 	show_node_indices=false, δ=0.25, δ₂=0.16, n, m

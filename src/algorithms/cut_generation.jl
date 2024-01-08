@@ -1,3 +1,8 @@
+"""
+$TYPEDSIGNATURES
+
+Solve the separation problem using the MILP formulation.
+"""
 function MILP_separation_problem(graph, weights; MILP_solver, tol=1e-6)
 	V = nv(graph)
 	E = ne(graph)
@@ -54,6 +59,11 @@ function build_flow_graph(graph, weights; infinity=1e6)
 	return sources, destinations, costs
 end
 
+"""
+$TYPEDSIGNATURES
+
+Solve the separation problem using the min cut formulation.
+"""
 function cut_separation_problem(graph, weights; MILP_solver=GLPK.Optimizer, tol=1e-6)
 	sources, destinations, costs = build_flow_graph(graph, weights)
 

@@ -1,5 +1,5 @@
 function separate_benders_cut(instance::TwoStageSpanningTreeInstance, y, s; MILP_solver, tol=1e-5)
-	(; graph, first_stage_costs, second_stage_costs) = instance
+	(; graph, second_stage_costs) = instance
 
 	E = ne(graph)
 
