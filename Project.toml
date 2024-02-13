@@ -19,6 +19,7 @@ DataStructures = "0.18"
 DocStringExtensions = "0.9"
 Graphs = "1.9"
 JuMP = "1"
+Plots = "1"
 julia = "1.9"
 
 [extras]
