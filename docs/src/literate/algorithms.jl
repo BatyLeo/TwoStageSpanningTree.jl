@@ -9,7 +9,7 @@ n = 5
 m = 4
 instance = TwoStageSpanningTreeInstance(; n, m, nb_scenarios=20, seed=0);
 
-## 1. Cut generation algorithm
+# ## 1. Cut generation algorithm
 #=
 As presented in the problem statement, the MIP formulation of the minimum weight two-stage spanning
 tree problem has an exponential number of constraints.
@@ -56,7 +56,7 @@ plot_scenario(mip_solution, instance, 1; n, m)
 #=
 The separation problem can alternatively be formulated as a min-cut problem, which has better performance and scaling.
 
-The separation problem 
+The separation problem
 ```math
 \min  |Y| - 1 - \sum_{e \in E(Y)} (y_e + z_{es}) \quad \text{subject to} \quad \emptyset \subsetneq Y \subsetneq V
 ```
@@ -68,7 +68,7 @@ is equivalent to
 
 Let us define the digraph ``\mathcal{D} = (\mathcal{V}, \mathcal{A})`` with vertex set ``\mathcal{V} = \{s,t\} \cup V \cup E`` and the following arcs.
 
-| Arc ``a`` | Capacity ``u_a`` | 
+| Arc ``a`` | Capacity ``u_a`` |
 | ------ | ----- |
 | ``(s,e)`` for ``e \in E`` | ``y_e + z_{es}`` |
 | ``(e,u)`` and ``(e,v)`` for ``e = (u,v) \in E`` | ``+\infty``|
@@ -83,7 +83,7 @@ The separation problem is equivalent to finding a non-empty minimum-capacity ``s
 	\mathrm{s.t.} \, & \alpha_s - \alpha_t \geq 1 \\
 	& \beta_a \geq \alpha_u - \alpha_v & \text{ for all } a= (u,v) \in \mathcal{A} \\
 	& \sum\limits_{v \in V} \alpha_v \geq 1 \\
-	& \alpha, \beta \in \{0,1\} 
+	& \alpha, \beta \in \{0,1\}
 \end{array}
 ```
 
@@ -97,9 +97,9 @@ cut_solution = cut_generation(instance; separation_problem=cut_separation_proble
 @benchmark cut_generation(instance; separation_problem=MILP_separation_problem)
 #
 @benchmark cut_generation(instance; separation_problem=cut_separation_problem)
-# 
+#
 is_feasible(cut_solution, instance)
-# 
+#
 solution_value(cut_solution, instance)
 
 # ## 2. Column generation
@@ -125,9 +125,9 @@ outputed by it is implemented by `column_heuristic`:
 column_solution = column_heuristic(instance)
 #
 @benchmark column_heuristic(instance)
-# 
+#
 is_feasible(column_solution, instance)
-# 
+#
 solution_value(column_solution, instance)
 
 # ## 3. Benders decomposition
@@ -202,9 +202,9 @@ The [`benders_decomposition`](@ref) implements this method:
 benders_solution = benders_decomposition(instance)
 #
 @benchmark benders_decomposition(instance)
-# 
+#
 is_feasible(benders_solution, instance)
-# 
+#
 solution_value(benders_solution, instance)
 
 # ## 4. Lagrangian relaxation
@@ -229,11 +229,11 @@ The Lagrangian dual problem becomes
 \max_{\theta}\mathcal{G}(\theta)= \min_{y}& \sum_{e \in E}(c_e + \frac{1}{|S|}\sum_{s \in S} \theta_{es})y_e \\
 &+ \frac{1}{|S|}\sum_{s \in S}\min_{\mathbf{y}_s,\mathbf{z}_s} \sum_{e \in E}d_{es}z_{es} - \theta_{es}y_{es}\\
 \mathrm{s.t.} & 0 \leq \mathbf{y} \leq M\\
-& \mathbf{y}_s + \mathbf{z}_s \in \mathcal{P}, \quad\quad \text{for all $s$ in $S$}  
+& \mathbf{y}_s + \mathbf{z}_s \in \mathcal{P}, \quad\quad \text{for all $s$ in $S$}
 \end{array}
 ```
 
-where ``M`` is a large constant. 
+where ``M`` is a large constant.
 In theory, we would take ``M=+\infty``, but taking a finite ``M`` leads to more informative gradients.
 
 We have
@@ -249,11 +249,11 @@ Once a solution of the relaxed problem is found, we have one solution $y_s$ per 
 The [`lagrangian_relaxation`](@ref) method implements this heuristic:
 =#
 solution, (; ub_history, lb_history) = lagrangian_relaxation(instance; nb_epochs=25000)
-# 
+#
 @benchmark lagrangian_relaxation(instance; nb_epochs=25000)
-# 
+#
 is_feasible(benders_solution, instance)
-# 
+#
 solution_value(benders_solution, instance)
 
 # We can plot the evolution of both lower and upper bounds along iterations
