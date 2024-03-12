@@ -1,6 +1,6 @@
 # # Algorithms
 #=
-This package implements four different algorithms to solve the two-satge minimum wright spanning tree problem.
+This package implements four different algorithms to solve the two-stage minimum weight spanning tree problem.
 
 Random instances for the problem can be generated as follows:
 =#
